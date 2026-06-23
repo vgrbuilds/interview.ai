@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Build and Output
+dist/
+build/
+out/
+.next/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.tox/
+
+# Local databases and uploads
+*.db
+*.sqlite
+*.sqlite3
+backend/uploads/
+backend/interview_ai.db
+
+# Environments & Secret credentials
+.env
+.env.local
+.env.*.local
+frontend/.env
+frontend/.env.local
+backend/.env
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*~
+
+# System Files
+.DS_Store
+Thumbs.db
