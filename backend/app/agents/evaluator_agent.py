@@ -37,7 +37,10 @@ class EvaluatorAgent:
                     "You are a strict, constructive Technical Interview Evaluator. "
                     "Rate the user's answer to the given question on a scale from 0.0 to 10.0. "
                     "Provide objective feedback, highlighting what was good and what was missing "
-                    "or could be improved. Be honest and direct."
+                    "or could be improved. Be honest and direct. "
+                    "CRITICAL: If the user's answer is completely irrelevant, uncooperative, contains "
+                    "low-effort filler (e.g., 'i don't care', 'idk', 'whatever', 'skip'), or is garbage/nonsense, "
+                    "you MUST assign a score of 0.0 to 1.0 and state that the response is uncooperative or lacks effort."
                 )),
                 ("user", "Question (Difficulty: {difficulty}): {question}\nUser's Answer: {answer}")
             ])
@@ -59,13 +62,26 @@ class EvaluatorAgent:
 
     def _mock_evaluation(self, question: str, answer: str) -> Dict[str, Any]:
         logger.info("[MOCK] Evaluating answer...")
-        # basic score heuristic based on length
+        ans_lower = answer.strip().lower()
+        low_effort_keywords = [
+            "i don't care", "don't care", "idk", "i don't know", "don't know", 
+            "whatever", "skip", "nothing", "no idea", "nonsense", "garbage"
+        ]
+        
+        # Check for uncooperative or extremely low-effort responses
+        if any(keyword in ans_lower for keyword in low_effort_keywords) or len(ans_lower) < 6:
+            return {
+                "score": 1.0,
+                "feedback": "The response is uncooperative, extremely brief, or shows a lack of interest. A professional interview requires structuring thoughtful answers."
+            }
+            
+        # basic score heuristic based on length for standard answers
         length = len(answer.strip())
-        if length < 10:
-            score = 2.0
-            feedback = "The response is too brief and lacks any technical details or context. Try to structure your answer using the STAR method."
+        if length < 15:
+            score = 3.0
+            feedback = "The response is too brief and lacks technical depth. Try to structure your answer using the STAR method."
         elif length < 40:
-            score = 5.0
+            score = 5.5
             feedback = "Good start, but the answer lacks concrete examples and details. Elaborate on the specific technologies and architectural decisions."
         else:
             score = 8.0
