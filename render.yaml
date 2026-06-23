@@ -25,6 +25,4 @@ services:
 
 databases:
   - name: interview-ai-db
-    databaseName: interview_ai
-    user: postgres
     plan: free
