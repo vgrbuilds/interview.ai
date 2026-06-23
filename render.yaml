@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: interview-ai-api
+    runtime: python
+    buildCommand: "pip install uv && uv sync"
+    startCommand: "uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    rootDir: backend
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: HOST
+        value: 0.0.0.0
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: interview-ai-db
+          property: connectionString
+
+databases:
+  - name: interview-ai-db
+    databaseName: interview_ai
+    user: postgres
+    plan: free
