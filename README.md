@@ -28,5 +28,4 @@ Setup guide
 3. Explore Dashboard: Navigate to `http://localhost:5173` in your browser.
 
 Deployed links
-* Frontend App (Vercel): https://interview-ai-demo.vercel.app
-* Backend API (Render): https://interview-ai-api.onrender.com
+* Frontend App (Vercel): https://interview-ai-xqx3-6pqdme6x4-vgrbuilds-projects.vercel.app/
