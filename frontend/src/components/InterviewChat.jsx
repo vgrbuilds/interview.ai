@@ -10,7 +10,6 @@ import {
   SoundOutlined,
   StopOutlined
 } from '@ant-design/icons';
-
 const { TextArea } = Input;
 
 export default function InterviewChat({ questions, currentQuestion, onAnswerSubmit, submitting }) {
@@ -22,18 +21,16 @@ export default function InterviewChat({ questions, currentQuestion, onAnswerSubm
   const recognitionRef = useRef(null);
   const utteranceRef = useRef(null);
 
-  // Auto-speak new question when it changes (if enabled)
   useEffect(() => {
     if (currentQuestion && autoSpeak) {
       speakText(currentQuestion.question);
     }
-    // Cancel speech when question changes or user leaves
+
     return () => {
       cancelSpeech();
     };
   }, [currentQuestion, autoSpeak]);
 
-  // Clean up speech recognition on unmount
   useEffect(() => {
     return () => {
       if (recognitionRef.current) {
@@ -44,35 +41,36 @@ export default function InterviewChat({ questions, currentQuestion, onAnswerSubm
 
   const handleSubmit = () => {
     if (!answerText.trim()) return;
-    
-    // Stop listening if active before submitting
+
     if (isListening && recognitionRef.current) {
       recognitionRef.current.stop();
     }
-    
-    // Stop speaking if active
-    cancelSpeech();
 
+    cancelSpeech();
     onAnswerSubmit(answerText);
     setAnswerText('');
   };
 
-  // Text to Speech (TTS)
+  const cancelSpeech = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+  };
+
   const speakText = (text) => {
-    if (!('speechSynthesis' in window)) {
-      message.warning('Text-to-Speech is not supported in this browser.');
+    if (!text || !('speechSynthesis' in window)) {
       return;
     }
 
     cancelSpeech();
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95; // Slightly slower for clear interview articulation
+    utterance.rate = 0.95;
     utterance.pitch = 1.0;
-    
-    // Attempt to select an English female/male voice if available
+
     const voices = window.speechSynthesis.getVoices();
-    const englishVoice = voices.find(voice => voice.lang.startsWith('en'));
+    const englishVoice = voices.find((voice) => voice.lang.startsWith('en'));
     if (englishVoice) {
       utterance.voice = englishVoice;
     }
@@ -85,19 +83,11 @@ export default function InterviewChat({ questions, currentQuestion, onAnswerSubm
     window.speechSynthesis.speak(utterance);
   };
 
-  const cancelSpeech = () => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-    }
-  };
-
-  // Speech to Text (STT)
   const toggleListening = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    
+
     if (!SpeechRecognition) {
-      message.error('Speech Recognition (STT) is not supported in this browser. Please use Chrome, Edge, or Safari.');
+      message.error('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
       return;
     }
 
@@ -109,7 +99,6 @@ export default function InterviewChat({ questions, currentQuestion, onAnswerSubm
       return;
     }
 
-    // Cancel speech if interviewer is speaking before user starts answering
     cancelSpeech();
 
     try {
@@ -125,18 +114,15 @@ export default function InterviewChat({ questions, currentQuestion, onAnswerSubm
 
       recognition.onresult = (event) => {
         const transcript = Array.from(event.results)
-          .map(result => result[0])
-          .map(result => result.transcript)
+          .map((result) => result[0])
+          .map((result) => result.transcript)
           .join('');
-        
-        setAnswerText(prev => prev + (prev ? ' ' : '') + transcript);
+
+        setAnswerText((prev) => prev + (prev ? ' ' : '') + transcript);
       };
 
       recognition.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
-        if (event.error !== 'no-speech') {
-          message.error(`Speech recognition error: ${event.error}`);
-        }
         setIsListening(false);
       };
 
@@ -146,9 +132,10 @@ export default function InterviewChat({ questions, currentQuestion, onAnswerSubm
 
       recognitionRef.current = recognition;
       recognition.start();
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
       setIsListening(false);
+      message.error('Unable to access the microphone.');
     }
   };
 

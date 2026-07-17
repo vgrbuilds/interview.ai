@@ -1,5 +1,6 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -17,6 +18,7 @@ from app.schemas.interview import (
 )
 from app.workflows.interview_graph import interview_workflow
 from app.agents.evaluator_agent import evaluator_agent
+from app.services.voice_service import voice_service
 
 logger = logging.getLogger("interview-api")
 router = APIRouter(prefix="/interview", tags=["interview"])
@@ -250,6 +252,63 @@ async def submit_answer(
             await db.rollback()
 
     return target_question
+
+
+@router.post("/{id}/tts")
+async def synthesize_question_audio(
+    id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = (
+        select(Interview)
+        .where(Interview.id == id, Interview.user_id == current_user.id)
+        .options(selectinload(Interview.questions))
+    )
+    res = await db.execute(stmt)
+    db_interview = res.scalars().first()
+
+    if not db_interview:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Interview not found.")
+
+    target_question = None
+    for q in db_interview.questions:
+        if q.answer is None:
+            target_question = q
+            break
+
+    if not target_question:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No active question found.")
+
+    try:
+        audio_bytes, content_type = voice_service.synthesize_speech(target_question.question)
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+
+    return Response(content=audio_bytes, media_type=content_type)
+
+
+@router.post("/{id}/stt")
+async def transcribe_answer_audio(
+    id: int,
+    audio: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(Interview).where(Interview.id == id, Interview.user_id == current_user.id)
+    res = await db.execute(stmt)
+    db_interview = res.scalars().first()
+
+    if not db_interview:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Interview not found.")
+
+    audio_bytes = await audio.read()
+    try:
+        transcript = voice_service.transcribe_audio(audio_bytes, content_type=audio.content_type or "audio/webm")
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    return {"transcript": transcript}
 
 
 @router.get("/{id}/report", response_model=FeedbackResponse)
